@@ -1,0 +1,47 @@
+### Curl
+
+```bash
+curl -X POST "http://127.0.0.1:8000/chat" \
+     -H "Content-Type: application/json" \
+     -d "{\"session_id\": \"test\", \"query\": \"你好\"}"
+```
+
+### POST /chat
+
+用于发送对话请求。
+
+**URL**: `http://<server-ip>:8000/chat`
+**Content-Type**: `application/json`
+
+**请求参数 (Request Body)**:
+
+| 参数名        | 类型    | 必选 | 描述                                                         |
+| :------------ | :------ | :--- | :----------------------------------------------------------- |
+| `query`       | string  | 是   | 用户的问题或指令。                                           |
+| `session_id`  | string  | 是   | 会话标识符。用于维护多轮对话上下文。同一用户的连续对话应使用相同的 ID。 |
+| `new_session` | boolean | 否   | 默认为 `false`。如果设置为 `true`，将在处理当前请求前清空该 `session_id` 的历史记录（用于页面刷新或开始新对话）。 |
+
+**示例请求**:
+
+```json
+{
+  "session_id": "user_123",
+  "query": "你好",
+  "new_session": true
+}
+```
+
+**响应参数**:
+
+| 参数名     | 类型   | 描述                |
+| :--------- | :----- | :------------------ |
+| `response` | string | AI 生成的回答内容。 |
+
+**示例响应**:
+
+```json
+{
+  "response": "ArtiMaker 支持导入 SVG, DXF, JPG, PNG 等格式..."
+}
+```
+
