@@ -63,7 +63,7 @@ graph TD
 1.  创建项目目录结构。
 2.  编写 `requirements.txt` (仅包含 `fastapi`, `uvicorn`, `numpy`, `requests`, `python-dotenv`)。
 
-### 阶段二：开发端数据处理脚本 (`ingest.py`)
+### 阶段二：开发端数据处理脚本 (`scripts/ingest.py`)
 1.  **功能**:
     *   读取本地 `.md` 知识文档。
     *   **Markdown 语义切分**: 识别 Markdown 标题 (`#`, `##`...)，按章节/段落进行切分，保留层级上下文（如 "标题1 > 标题2: 内容"）。
@@ -95,14 +95,16 @@ graph TD
 
 ```text
 /
-├── architecture_design.md  # 本文档
-├── ingest.py              # [开发端] 数据处理脚本
 ├── server.py              # [服务端] API 服务主程序
+├── scripts/
+│   └── ingest.py          # [开发端] 数据处理脚本
 ├── requirements.txt       # 依赖列表
 ├── Dockerfile             # 构建文件
 ├── .env                   # 环境变量 (API Key)
-├── data/
-    ├── knowledge.md       # 原始 Markdown 文档
+├── docs/
+│   ├── architecture_design.md
+│   └── project_notes.md
+└── data/
     └── knowledge.pkl      # 生成的向量库文件
 ```
 

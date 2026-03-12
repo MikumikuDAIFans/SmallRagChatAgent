@@ -38,9 +38,9 @@ docker run -d \
 当您有新的文档 (`.md`) 需要添加到知识库时：
 
 1.  将新的 Markdown 文件放入 `doc/` 目录。
-2.  在本地运行 `tool/ingest.py` 脚本生成新的向量文件：
+2.  在本地运行 `scripts/ingest.py` 脚本生成新的向量文件：
     ```bash
-    python tool/ingest.py
+    python scripts/ingest.py
     ```
     *此命令会读取 `doc/` 下的所有文件，生成 `data/knowledge.pkl`。*
 3.  **重启服务** (以便加载新的 pickle 文件到内存)：
@@ -100,7 +100,7 @@ docker run -d \
 
 ### 5.1 使用交互式脚本
 ```bash
-python tool/interactive_client.py
+python scripts/interactive_client.py
 ```
 该脚本会自动连接本地 8000 端口进行多轮对话测试。
 

@@ -8,6 +8,5 @@ __pycache__/
 .venv/
 venv/
 docs/
-tool/
-开发和使用文档/
+scripts/
 README.md
