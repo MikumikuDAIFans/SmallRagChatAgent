@@ -1,63 +1,65 @@
 # Small RAG Chat Agent
 
-这是一个面向 ArtiMaker 帮助文档场景的轻量级 RAG 问答服务。
+一个面向 ArtiMaker 帮助文档场景的轻量级 RAG 问答服务。
 
-项目特点：
+它的目标很明确：用尽量少的依赖提供一个可部署、可维护、可迁移的知识问答 API。当前实现基于 Python + FastAPI + SiliconFlow，支持离线知识入库、在线向量检索、多轮上下文和 Docker 部署。
 
-- 对外只提供一个 `POST /chat` 接口，便于前端或其他系统接入。
-- 使用 SiliconFlow 提供的 Embedding 和 LLM 能力。
-- 知识库在离线阶段预处理，线上只做加载、检索和问答。
-- 支持基于 `session_id` 的短期多轮上下文。
-- 适合先作为独立 Python 服务运行，再逐步迁移到 Java 大项目。
+## 项目特性
 
-## 目录结构
+- 只暴露一个核心接口：`POST /chat`
+- 使用 SiliconFlow `embeddings` 和 `chat/completions`
+- 通过离线脚本生成知识库，减轻线上服务压力
+- 支持基于 `session_id` 的短期多轮会话
+- 适合作为独立服务运行，也适合作为 Java 迁移前的参考实现
+
+## 工作原理
+
+在线问答链路：
+
+1. 客户端调用 `POST /chat`
+2. 服务将 `query` 发送到 Embedding 接口生成向量
+3. 服务在本地知识数据中做相似度检索
+4. 服务组装 `system prompt + context + history + query`
+5. 服务调用大模型接口生成回答
+6. 服务返回 `response` 并更新当前会话历史
+
+离线入库链路：
+
+1. 将 Markdown 文档放入 `doc/`
+2. 执行 `scripts/ingest.py`
+3. 生成 `data/knowledge.pkl`
+4. 重启服务加载新知识库
+
+## 仓库结构
 
 ```text
 .
-|-- server.py                 # 服务入口
-|-- requirements.txt          # Python 依赖
-|-- Dockerfile                # Docker 构建文件
-|-- .env.example              # 环境变量模板
-|-- .gitignore                # Git 忽略规则
-|-- .dockerignore             # Docker 构建忽略规则
-|-- System_prompt.txt         # 系统提示词
-|-- data/                     # 运行期数据目录
-|   `-- README.md             # 数据目录说明
-|-- doc/                      # 原始知识文档（Markdown）
-|-- scripts/                  # 入库、测试、压测脚本
-|-- docs/                     # 项目文档与迁移文档
-`-- deploy_package/           # 面向服务器部署的精简运行包
+├── server.py                  # 在线服务入口
+├── requirements.txt           # Python 依赖
+├── Dockerfile                 # Docker 构建文件
+├── .env.example               # 环境变量模板
+├── System_prompt.txt          # 系统提示词
+├── scripts/                   # 入库、测试、压测脚本
+├── doc/                       # 原始知识文档
+├── data/                      # 运行期数据目录
+├── docs/                      # 设计、使用、迁移文档
+├── deploy_package/            # 精简部署包
+├── CONTRIBUTING.md            # 贡献说明
+├── SECURITY.md                # 安全问题上报说明
+└── .github/                   # Issue、PR、CI 配置
 ```
-
-## 核心流程
-
-在线问答流程：
-
-1. 客户端调用 `POST /chat`。
-2. 服务调用 Embedding 接口生成问题向量。
-3. 服务从本地知识库检索相关片段。
-4. 服务组装 `system prompt + context + history + query`。
-5. 服务调用 LLM 接口生成回答。
-6. 返回 `response`，并更新会话上下文。
-
-离线入库流程：
-
-1. 将知识文档放入 `doc/`。
-2. 运行 `scripts/ingest.py`。
-3. 生成 `data/knowledge.pkl`。
-4. 重启服务后使用新知识库。
 
 ## 快速开始
 
 ### 1. 配置环境变量
 
-复制模板：
+复制模板文件：
 
 ```bash
 cp .env.example .env
 ```
 
-至少需要配置：
+至少需要配置以下变量：
 
 - `SILICONFLOW_API_KEY`
 - `SILICONFLOW_BASE_URL`
@@ -83,7 +85,7 @@ python server.py
 python scripts/interactive_client.py
 ```
 
-## 接口说明
+## API 示例
 
 ### `POST /chat`
 
@@ -105,50 +107,56 @@ python scripts/interactive_client.py
 }
 ```
 
-如果你只关心 Java 迁移，请直接看：
+## Docker 部署
 
-- [Java 迁移接口说明](/E:/pythonAgent/docs/java-migration-api.md)
-
-## 常用脚本
-
-| 脚本 | 作用 |
-| :--- | :--- |
-| `scripts/ingest.py` | 根据 `doc/` 文档重建知识库 |
-| `scripts/interactive_client.py` | 本地多轮对话测试 |
-| `scripts/test_server.py` | 简单请求测试 |
-| `scripts/load_test.py` | 并发压测 |
-| `scripts/verify_update.py` | 更新后快速验证 |
-
-## 部署说明
-
-推荐使用 Docker：
+构建镜像：
 
 ```bash
 docker build -t rag-agent .
-docker run -d -p 8000:8000 -v $(pwd)/data:/app/data -v $(pwd)/System_prompt.txt:/app/System_prompt.txt --env-file .env --name rag-agent rag-agent
 ```
 
-补充说明：
+运行容器：
 
-- `data/knowledge.pkl` 是运行产物，默认不提交 Git。
-- `.env` 为本地私密配置，默认不提交 Git。
-- `System_prompt.txt` 会在每次请求时读取，修改后通常无需重启服务。
-- `deploy_package/` 是面向服务器的精简运行包，适合单独拷贝部署。
+```bash
+docker run -d \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  -v $(pwd)/System_prompt.txt:/app/System_prompt.txt \
+  --env-file .env \
+  --name rag-agent \
+  rag-agent
+```
 
-## 文档索引
+## 常用脚本
 
-- [文档目录说明](/E:/pythonAgent/docs/README.md)
-- [使用说明](/E:/pythonAgent/docs/usage_guide.md)
-- [架构设计](/E:/pythonAgent/docs/architecture_design.md)
-- [Java 迁移接口说明](/E:/pythonAgent/docs/java-migration-api.md)
+| 脚本 | 说明 |
+| :--- | :--- |
+| `scripts/ingest.py` | 根据 `doc/` 中的文档重建知识库 |
+| `scripts/interactive_client.py` | 本地多轮对话测试 |
+| `scripts/test_server.py` | 简单接口测试 |
+| `scripts/load_test.py` | 并发压测 |
+| `scripts/verify_update.py` | 更新后快速验证 |
 
-## 提交说明
+## 文档
 
-当前仓库已经整理为适合长期维护的结构：
+- [使用说明](docs/usage_guide.md)
+- [架构设计](docs/architecture_design.md)
+- [Java 迁移实现文档](docs/java-migration-api.md)
+- [文档目录说明](docs/README.md)
 
-- 业务代码保留在根目录和 `scripts/`
-- 文档统一放在 `docs/`
-- 运行数据统一放在 `data/`
-- 部署包单独放在 `deploy_package/`
+## 开发与协作
 
-如果后续继续迭代，建议保持这个分层方式不再混放。
+- 提交代码前请至少运行一次基础校验
+- 新增文档后请同步更新对应说明
+- 对外接口变更时请同步更新 README 和迁移文档
+- 贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## 安全说明
+
+- 不要提交 `.env`、真实密钥或生成后的 `knowledge.pkl`
+- 如发现安全问题，请按 [SECURITY.md](SECURITY.md) 中的方式反馈
+
+## 开源说明
+
+当前仓库已经按开源项目结构整理，但还没有加入正式的 `LICENSE` 文件。  
+如果你准备把它作为真正的开源项目公开发布，建议优先补充许可证，否则其他人默认没有合法的复制、修改和分发权限。
